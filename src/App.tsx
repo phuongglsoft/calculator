@@ -1,4 +1,5 @@
-import { useState } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useEffect, useState } from 'react';
 import { getLocalStorageData, setLocalStorage } from './utils/local-storage';
 
 const localStorageKey = 'LC';
@@ -18,6 +19,10 @@ const operators = {
 
 type OperatorValues = (typeof operators)[keyof typeof operators];
 
+const numberKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9','.'];
+const operatorsKeys = ['+', '-', '*', '/'];
+const equalKeys = ['=', 'Enter'];
+
 function App() {
   const [result, setResult] = useState<string>('');
   const [theme, setTheme] = useState<Theme>(Theme.Light);
@@ -25,18 +30,71 @@ function App() {
   const [input, setInput] = useState<string>('');
   const [calculated, setCalculated] = useState(false);
 
-  function handleNumberClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+  function handleNumberSelect(number: string) {
     if (calculated && !operator) {
-      setResult((e.target as HTMLButtonElement).name);
+      setResult(number);
       setCalculated(false);
     }
     else if (!operator) {
-      setResult(prev => prev + (e.target as HTMLButtonElement).name);
+      setResult(prev => {
+        if (number != '.') {
+
+          return prev + number;
+        } else if (!prev.includes('.')) {
+          return prev + number;
+        }
+        return prev;
+      }
+      );
     }
     else {
-      setInput(prev => prev + (e.target as HTMLButtonElement).name);
+      setInput(prev => prev + number);
     }
   }
+
+  function handleOperatorSelect(inputOperator: OperatorValues) {
+    if (input) {
+      const inputNum = parseFloat(input);
+      setResult((prev) => {
+        const prevNum = parseFloat(prev);
+        let calculatedVal = 0;
+        switch (operator) {
+          case '+': calculatedVal = prevNum + inputNum; break;
+          case '-': calculatedVal = prevNum - inputNum; break;
+          case '*': calculatedVal = prevNum * inputNum; break;
+          case '/': calculatedVal = prevNum / inputNum; break;
+          default: calculatedVal = prevNum;
+        }
+        return calculatedVal.toString();
+      })
+      setInput('');
+    }
+    setOperator(inputOperator);
+  }
+
+  function handleNumberClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    handleNumberSelect((e.target as HTMLButtonElement).name);
+  }
+
+  useEffect(() => {
+    function keyBinding(e: KeyboardEvent) {
+      if (numberKeys.includes(e.key)) {
+        handleNumberSelect(e.key);
+      }
+      else if (operatorsKeys.includes(e.key)) {
+        handleOperatorSelect(e.key as OperatorValues);
+      }
+      else if (equalKeys.includes(e.key)) {
+        handleCalculate();
+      }
+    }
+    document.addEventListener('keydown', keyBinding)
+
+    return () => {
+      document.removeEventListener('keydown', keyBinding);
+    }
+
+  })
 
   function handleMPlusClick() {
     const data = getLocalStorageData<string>(localStorageKey);
@@ -78,7 +136,7 @@ function App() {
     return calculatedVal;
   }
 
-  function handleEqualClick() {
+  function handleCalculate() {
     if (result || input) {
       setResult(calculateResult().toString());
     }
@@ -103,27 +161,33 @@ function App() {
   }
 
   function handleOperatorClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-    if (input) {
-      const inputNum = parseFloat(input);
-      setResult((prev) => {
-        const prevNum = parseFloat(prev);
-        let calculatedVal = 0;
-        switch (operator) {
-          case '+': calculatedVal = prevNum + inputNum; break;
-          case '-': calculatedVal = prevNum - inputNum; break;
-          case '*': calculatedVal = prevNum * inputNum; break;
-          case '/': calculatedVal = prevNum / inputNum; break;
-          default: calculatedVal = prevNum;
-        }
-        return calculatedVal.toString();
-      })
-      setInput('');
+    handleOperatorSelect((e.target as HTMLButtonElement).name as OperatorValues);
+  }
+
+  function formatNumber(number: string) {
+    if (!number) return;
+    const [integer, decimal] = number.split('.');
+    let result = '';
+    let count = 0;
+    for (let i = integer.length - 1; i >= 0; i--) {
+      result = integer[i] + result;
+      count++;
+      if (count % 3 === 0 && i !== 0) {
+        result = ',' + result;
+      }
     }
-    setOperator((e.target as HTMLButtonElement).name as OperatorValues);
+    if (!decimal) {
+      if (number.includes('.')) {
+        return `${result}.`;
+      }
+      return result;
+    }
+
+    return `${result}.${decimal}`;
   }
 
   return (
-    <div className={`calculator ${theme === Theme.Dark && 'dark-theme'}`}>
+    <div className={`calculator ${theme === Theme.Dark && 'dark-theme'}`} >
       <div className='title-container'>
         <h2>Calculator</h2>
         <label className="switch">
@@ -132,8 +196,8 @@ function App() {
         </label>
       </div>
       <div className='calculation-container'>
-        <div className='output'>{result}{operator}</div>
-        <div className='input'>{input}</div>
+        <div className='output'>{formatNumber(result)}{operator}</div>
+        <div className='input'>{formatNumber(input)}</div>
       </div>
       <div className='buttons-container grid'>
         <button onClick={handleMCClick}>MC</button>
@@ -155,7 +219,7 @@ function App() {
         <button name='.' onClick={handleNumberClick}>.</button>
         <button name='0' onClick={handleNumberClick}>0</button>
         <button name='C' onClick={handleClear}>C</button>
-        <button onClick={handleEqualClick} className='dark' >=</button>
+        <button onClick={handleCalculate} className='dark' >=</button>
       </div>
     </div>
   )
