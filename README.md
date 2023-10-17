@@ -1,5 +1,5 @@
-## :information_source: How To Use
 [Demo](https://phuong-calculator.netlify.app/)
+## :information_source: How To Use
 ```bash
 # Clone this repository
 $ git clone https://github.com/phuongglsoft/calculator.git
