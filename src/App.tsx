@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useEffect, useState } from 'react';
+
+import { useEffect, useRef, useState } from 'react';
 import { getLocalStorageData, setLocalStorage } from './utils/local-storage';
 
 const localStorageKey = 'LC';
@@ -19,17 +20,38 @@ const operators = {
 
 type OperatorValues = (typeof operators)[keyof typeof operators];
 
-const numberKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9','.'];
+const numberKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'];
 const operatorsKeys = ['+', '-', '*', '/'];
-const equalKeys = ['=', 'Enter'];
+
+function formatNumber(number: string) {
+  if (!number) return;
+  const [integer, decimal] = number.split('.');
+  let result = '';
+  let count = 0;
+
+  for (let i = integer.length - 1; i >= 0; i--) {
+    result = integer[i] + result;
+    count++;
+    if (count % 3 === 0 && i !== 0) {
+      result = ',' + result;
+    }
+  }
+  if (!decimal) {
+    if (number.includes('.')) {
+      return `${result}.`;
+    }
+    return result;
+  }
+  return `${result}.${decimal}`;
+}
 
 function App() {
   const [result, setResult] = useState<string>('');
-  const [theme, setTheme] = useState<Theme>(Theme.Light);
   const [operator, setOperator] = useState<OperatorValues>('');
   const [input, setInput] = useState<string>('');
   const [calculated, setCalculated] = useState(false);
-
+  const [theme, setTheme] = useState<Theme>(Theme.Light);
+  const calculateRef = useRef<HTMLButtonElement | null>(null);
   function handleNumberSelect(number: string) {
     if (calculated && !operator) {
       setResult(number);
@@ -84,17 +106,18 @@ function App() {
       else if (operatorsKeys.includes(e.key)) {
         handleOperatorSelect(e.key as OperatorValues);
       }
-      else if (equalKeys.includes(e.key)) {
-        handleCalculate();
+      else if (e.key === 'Delete') {
+        handleClear();
       }
     }
-    document.addEventListener('keydown', keyBinding)
+
+    document.addEventListener('keypress', keyBinding)
 
     return () => {
-      document.removeEventListener('keydown', keyBinding);
+      document.removeEventListener('keypress', keyBinding);
     }
-
   })
+
 
   function handleMPlusClick() {
     const data = getLocalStorageData<string>(localStorageKey);
@@ -120,11 +143,11 @@ function App() {
     setLocalStorage(localStorageKey, JSON.stringify(0));
   }
 
+
   function calculateResult() {
     const inputNum = input ? parseFloat(input) : 0;
     const prevNum = result ? parseFloat(result) : 0;
     let calculatedVal = 0;
-
     switch (operator) {
       case '+': calculatedVal = prevNum + inputNum; break;
       case '-': calculatedVal = prevNum - inputNum; break;
@@ -142,7 +165,7 @@ function App() {
     }
     setOperator('');
     setInput('');
-    setCalculated(true);
+    setCalculated(false);
   }
 
   function toggleTheme() {
@@ -158,36 +181,17 @@ function App() {
     setResult('');
     setInput('');
     setOperator('');
+    setCalculated(false);
   }
 
   function handleOperatorClick(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     handleOperatorSelect((e.target as HTMLButtonElement).name as OperatorValues);
   }
 
-  function formatNumber(number: string) {
-    if (!number) return;
-    const [integer, decimal] = number.split('.');
-    let result = '';
-    let count = 0;
-    for (let i = integer.length - 1; i >= 0; i--) {
-      result = integer[i] + result;
-      count++;
-      if (count % 3 === 0 && i !== 0) {
-        result = ',' + result;
-      }
-    }
-    if (!decimal) {
-      if (number.includes('.')) {
-        return `${result}.`;
-      }
-      return result;
-    }
-
-    return `${result}.${decimal}`;
-  }
+  console.log('result', result);
 
   return (
-    <div className={`calculator ${theme === Theme.Dark && 'dark-theme'}`} >
+    <div className={`calculator ${theme === Theme.Dark ? ' dark-theme' : ''}`} >
       <div className='title-container'>
         <h2>Calculator</h2>
         <label className="switch">
@@ -208,20 +212,20 @@ function App() {
         <button name='8' onClick={handleNumberClick}>8</button>
         <button name='9' onClick={handleNumberClick}>9</button>
         <button name='*' onClick={handleOperatorClick} className='dark'>*</button>
-        <button name='4' onClick={handleNumberClick}>4</button>
-        <button name='5' onClick={handleNumberClick}>5</button>
+        <button name='4' onClick={handleNumberClick} >4</button>
+        <button name='5' onClick={handleNumberClick} >5</button>
         <button name='6' onClick={handleNumberClick}>6</button>
         <button name='-' onClick={handleOperatorClick} className='dark'>-</button>
-        <button name='1' onClick={handleNumberClick}>1</button>
+        <button name='1' onClick={handleNumberClick} >1</button>
         <button name='2' onClick={handleNumberClick}>2</button>
-        <button name='3' onClick={handleNumberClick}>3</button>
+        <button name='3' onClick={handleNumberClick} >3</button>
         <button name='+' onClick={handleOperatorClick} className='dark'>+</button>
-        <button name='.' onClick={handleNumberClick}>.</button>
+        <button name='.' onClick={handleNumberClick} >.</button>
         <button name='0' onClick={handleNumberClick}>0</button>
         <button name='C' onClick={handleClear}>C</button>
-        <button onClick={handleCalculate} className='dark' >=</button>
+        <button onClick={handleCalculate} className='dark' ref={calculateRef}>=</button>
       </div>
-    </div>
+    </div >
   )
 }
 
